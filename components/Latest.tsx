@@ -1,3 +1,5 @@
+"use client";
+
 import { listings } from "@/data/listings";
 import { Heart } from "lucide-react";
 
@@ -18,7 +20,7 @@ export default function Latest() {
           >
             {/* Image */}
             <div className="relative h-44 bg-slate-200">
-              
+
               {/* Price badge */}
               <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2.5 py-1 rounded-full text-sm font-semibold shadow">
                 {property.price}
