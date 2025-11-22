@@ -1,3 +1,5 @@
+"use client";
+
 import { Heart, Phone, MessageCircle } from "lucide-react";
 
 export default function PropertyDetail() {
