@@ -1,8 +1,9 @@
+"use client";
+
 import { listings } from "@/data/listings";
 import { Heart } from "lucide-react";
 
 export default function Featured() {
-  // Take the first 3 featured items
   const featuredListings = listings.slice(0, 3);
 
   return (
@@ -16,20 +17,16 @@ export default function Featured() {
             onClick={() => (window.location.href = `/listing/${property.id}`)}
             className="relative group rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 cursor-pointer"
           >
-            {/* Image */}
             <div className="relative h-52 bg-slate-200">
-              {/* Price Badge */}
               <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-sm font-semibold shadow">
                 {property.price}
               </div>
 
-              {/* Favorite Icon */}
               <button className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur rounded-full shadow hover:scale-110 transition">
                 <Heart className="w-5 h-5 text-red-500" />
               </button>
             </div>
 
-            {/* Details */}
             <div className="p-4 space-y-1">
               <h3 className="font-semibold text-lg">{property.title}</h3>
               <p className="text-sm text-slate-600">
