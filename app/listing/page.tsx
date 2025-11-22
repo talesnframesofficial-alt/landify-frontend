@@ -1,149 +1,105 @@
 "use client";
 
-import { useState } from "react";
-import { SlidersHorizontal, ChevronDown, Heart } from "lucide-react";
+import { Heart, Phone, MessageCircle } from "lucide-react";
 
-export default function ListingsPage() {
-  const [filtersOpen, setFiltersOpen] = useState(false);
-
+export default function PropertyDetail() {
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
 
-      {/* PAGE TITLE + SORT */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Properties for Sale</h1>
-
-        {/* SORT DROPDOWN */}
-        <select
-          className="border rounded-lg px-3 py-2 text-sm shadow-sm"
-        >
-          <option>Sort: Newest</option>
-          <option>Price: Low to High</option>
-          <option>Price: High to Low</option>
-        </select>
+      {/* IMAGE GALLERY */}
+      <div className="relative w-full h-64 md:h-96 bg-slate-200 rounded-xl overflow-hidden">
+        {/* Heart / Favorite */}
+        <button className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur rounded-full shadow hover:scale-110 transition">
+          <Heart className="w-6 h-6 text-red-500" />
+        </button>
       </div>
 
-      {/* FILTER BUTTON FOR MOBILE */}
-      <button
-        onClick={() => setFiltersOpen(true)}
-        className="md:hidden flex items-center gap-2 w-full bg-black text-white py-2 px-4 rounded-lg"
-      >
-        <SlidersHorizontal className="w-5 h-5" />
-        Filters
-      </button>
+      {/* PRICE + ACTION BUTTONS */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl md:text-3xl font-bold">3BHK Luxury Villa</h1>
+        <span className="text-xl font-semibold text-green-700">
+          ₹ 65,00,000
+        </span>
+      </div>
 
-      {/* FILTER SIDEBAR (DESKTOP) */}
-      <div className="hidden md:grid grid-cols-4 gap-6">
-        <div className="bg-white p-4 rounded-xl shadow-sm h-fit space-y-4">
-          <h2 className="font-semibold text-lg">Filters</h2>
-
-          <div>
-            <p className="text-sm text-slate-600 mb-1">Location</p>
-            <input
-              placeholder="City"
-              className="w-full border rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
-
-          <div>
-            <p className="text-sm text-slate-600 mb-1">Min Price</p>
-            <input
-              type="number"
-              className="w-full border rounded-lg px-3 py-2 text-sm"
-              placeholder="₹"
-            />
-          </div>
-
-          <div>
-            <p className="text-sm text-slate-600 mb-1">Max Price</p>
-            <input
-              type="number"
-              className="w-full border rounded-lg px-3 py-2 text-sm"
-              placeholder="₹"
-            />
-          </div>
+      {/* OWNER INFO + ACTIONS */}
+      <div className="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
+        <div>
+          <p className="font-semibold">Owner: Senthil Kumar</p>
+          <p className="text-sm text-blue-600 font-medium">✔ Verified Owner</p>
         </div>
 
-        {/* LISTING CARDS */}
-        <div className="col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div className="flex gap-2">
+          <button className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg">
+            <MessageCircle className="w-5 h-5" /> Chat
+          </button>
+          <button className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg">
+            <Phone className="w-5 h-5" /> Call
+          </button>
+        </div>
+      </div>
+
+      {/* PROPERTY DETAILS */}
+      <div className="bg-white p-4 rounded-xl shadow-sm">
+        <h2 className="text-lg font-semibold mb-3">Property Details</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <p className="text-slate-500">Built-up Area</p>
+            <p className="font-semibold">2100 sqft</p>
+          </div>
+          <div>
+            <p className="text-slate-500">Bedrooms</p>
+            <p className="font-semibold">3</p>
+          </div>
+          <div>
+            <p className="text-slate-500">Bathrooms</p>
+            <p className="font-semibold">3</p>
+          </div>
+          <div>
+            <p className="text-slate-500">Parking</p>
+            <p className="font-semibold">Yes</p>
+          </div>
+        </div>
+      </div>
+
+      {/* DESCRIPTION */}
+      <div className="bg-white p-4 rounded-xl shadow-sm">
+        <h2 className="text-lg font-semibold mb-3">Description</h2>
+        <p className="text-slate-700 leading-relaxed text-sm">
+          This 3BHK villa is located in a prime area with access to schools, hospitals,
+          shopping centers, and public transportation. Recently renovated with
+          premium fittings and modern interiors.
+        </p>
+      </div>
+
+      {/* MAP */}
+      <div className="bg-white p-4 rounded-xl shadow-sm">
+        <h2 className="text-lg font-semibold mb-3">Location on Map</h2>
+        <div className="w-full h-56 bg-slate-200 rounded-xl"></div>
+      </div>
+
+      {/* SIMILAR LISTINGS */}
+      <div>
+        <h2 className="text-lg font-semibold mb-3">Similar Listings</h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="bg-white rounded-xl shadow-sm hover:shadow-lg overflow-hidden transition hover:-translate-y-1"
+              className="bg-white rounded-xl shadow-sm hover:shadow-md overflow-hidden transition"
             >
-              <div className="relative h-48 bg-slate-200">
-                <button className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur rounded-full shadow hover:scale-110 transition">
-                  <Heart className="w-5 h-5 text-red-500" />
-                </button>
-              </div>
-
-              <div className="p-4 space-y-1">
-                <h3 className="font-semibold text-lg">2BHK Apartment</h3>
-                <p className="text-sm text-slate-600">Coimbatore • 1050 sqft</p>
-                <p className="font-semibold text-green-700">₹ 45,00,000</p>
+              <div className="h-40 bg-slate-200" />
+              <div className="p-3">
+                <h3 className="font-semibold">2BHK Apartment</h3>
+                <p className="text-sm text-slate-600">₹ 32,00,000 • Chennai</p>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* MOBILE FILTER OVERLAY */}
-      {filtersOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex justify-end md:hidden">
-          <div className="bg-white w-3/4 h-full p-5 space-y-4 shadow-xl">
-
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Filters</h2>
-              <button
-                onClick={() => setFiltersOpen(false)}
-                className="text-sm text-slate-600"
-              >
-                Close
-              </button>
-            </div>
-
-            <div>
-              <p className="text-sm text-slate-600 mb-1">Location</p>
-              <input
-                placeholder="City"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div>
-              <p className="text-sm text-slate-600 mb-1">Min Price</p>
-              <input
-                type="number"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="₹"
-              />
-            </div>
-
-            <div>
-              <p className="text-sm text-slate-600 mb-1">Max Price</p>
-              <input
-                type="number"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="₹"
-              />
-            </div>
-
-            <button
-              onClick={() => setFiltersOpen(false)}
-              className="w-full bg-black text-white py-2 rounded-lg mt-4"
-            >
-              Apply Filters
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* LOAD MORE */}
-      <div className="flex justify-center">
-        <button className="px-6 py-2 bg-black text-white rounded-lg shadow hover:opacity-90">
-          Load More
-        </button>
-      </div>
     </div>
   );
 }
+
+
