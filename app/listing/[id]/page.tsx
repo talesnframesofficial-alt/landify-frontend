@@ -6,27 +6,24 @@ export default function PropertyDetail() {
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
 
-      {/* IMAGE GALLERY */}
+      {/* IMAGE */}
       <div className="relative w-full h-64 md:h-96 bg-slate-200 rounded-xl overflow-hidden">
-        {/* Heart / Favorite */}
-        <button className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur rounded-full shadow hover:scale-110 transition">
+        <button className="absolute top-3 right-3 p-2 bg-white/90 rounded-full shadow">
           <Heart className="w-6 h-6 text-red-500" />
         </button>
       </div>
 
-      {/* PRICE + ACTION BUTTONS */}
+      {/* PRICE + TITLE */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl md:text-3xl font-bold">3BHK Luxury Villa</h1>
-        <span className="text-xl font-semibold text-green-700">
-          ₹ 65,00,000
-        </span>
+        <span className="text-xl font-semibold text-green-600">₹ 65,00,000</span>
       </div>
 
-      {/* OWNER INFO + ACTIONS */}
+      {/* OWNER DETAILS */}
       <div className="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
         <div>
           <p className="font-semibold">Owner: Senthil Kumar</p>
-          <p className="text-sm text-blue-600 font-medium">✔ Verified Owner</p>
+          <p className="text-sm text-blue-600">✔ Verified Owner</p>
         </div>
 
         <div className="flex gap-2">
@@ -39,9 +36,10 @@ export default function PropertyDetail() {
         </div>
       </div>
 
-      {/* PROPERTY DETAILS */}
+      {/* DETAILS */}
       <div className="bg-white p-4 rounded-xl shadow-sm">
         <h2 className="text-lg font-semibold mb-3">Property Details</h2>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
             <p className="text-slate-500">Built-up Area</p>
@@ -65,10 +63,9 @@ export default function PropertyDetail() {
       {/* DESCRIPTION */}
       <div className="bg-white p-4 rounded-xl shadow-sm">
         <h2 className="text-lg font-semibold mb-3">Description</h2>
-        <p className="text-slate-700 leading-relaxed text-sm">
-          This 3BHK villa is located in a prime area with access to schools, hospitals,
-          shopping centers, and public transportation. Recently renovated with
-          premium fittings and modern interiors.
+        <p className="text-sm text-slate-700 leading-relaxed">
+          This 3BHK villa is located in a prime area near schools, hospitals,
+          and shopping centers. Recently renovated with premium fittings.
         </p>
       </div>
 
@@ -84,10 +81,7 @@ export default function PropertyDetail() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="bg-white rounded-xl shadow-sm hover:shadow-md overflow-hidden transition"
-            >
+            <div key={i} className="bg-white rounded-xl shadow-sm hover:shadow-md transition">
               <div className="h-40 bg-slate-200" />
               <div className="p-3">
                 <h3 className="font-semibold">2BHK Apartment</h3>
