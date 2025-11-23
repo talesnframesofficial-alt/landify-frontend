@@ -2,40 +2,34 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
-  try {
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+  const formData = await req.formData();
+  const files = formData.getAll("files") as File[];
 
-    if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
-    }
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
+  const urls: string[] = [];
+
+  for (const file of files) {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const fileName = `images/${Date.now()}-${file.name}`;
+    const filename = `photos/${Date.now()}-${file.name}`;
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const { data, error } = await supabase.storage
-      .from("listing-images")
-      .upload(fileName, buffer, {
+    const { error } = await supabase.storage
+      .from("ads")
+      .upload(filename, buffer, {
         contentType: file.type,
       });
 
     if (error) {
       console.error(error);
-      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    const { data: publicUrl } = supabase.storage
-      .from("listing-images")
-      .getPublicUrl(fileName);
-
-    return NextResponse.json({ url: publicUrl.publicUrl });
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/ads/${filename}`;
+    urls.push(url);
   }
+
+  return NextResponse.json({ urls });
 }
