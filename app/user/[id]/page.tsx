@@ -1,6 +1,15 @@
-import { supabase } from "@/utils/supabaseClient";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/auth-helpers-nextjs";
 
-export default async function SellerProfile({ params }: any) {
+export default async function SellerProfile({ params }: { params: { id: string } }) {
+  const cookieStore = cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: () => cookieStore }
+  );
+
   const { id } = params;
 
   // Fetch seller details
@@ -23,7 +32,9 @@ export default async function SellerProfile({ params }: any) {
       <div className="bg-white p-5 rounded-xl shadow">
         <h1 className="text-2xl font-bold">{profile?.full_name || "Seller"}</h1>
         <p className="text-slate-600">{profile?.city}</p>
-        <p className="text-sm text-slate-500 mt-2">Joined: {profile?.created_at?.slice(0,10)}</p>
+        <p className="text-sm text-slate-500 mt-2">
+          Joined: {profile?.created_at?.slice(0,10)}
+        </p>
       </div>
 
       {/* Other ads from seller */}
