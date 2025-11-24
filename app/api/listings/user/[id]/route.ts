@@ -1,3 +1,6 @@
+// FIX for Next.js 16 dynamic route type check
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -24,3 +27,4 @@ export async function GET(
 
   return NextResponse.json({ listings: data });
 }
+
