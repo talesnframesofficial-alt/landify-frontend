@@ -1,5 +1,6 @@
 // @ts-nocheck
-import { NextRequest, NextResponse } from "next/server";
+
+import { NextResponse, NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
@@ -8,13 +9,14 @@ export async function GET(
   request: NextRequest,
   context: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const id = context.params.id;
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // Fetch all ads by this user
   const { data, error } = await supabase
     .from("listings")
     .select("*")
@@ -22,7 +24,7 @@ export async function GET(
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   return NextResponse.json({ listings: data });
