@@ -1,12 +1,13 @@
-// @ts-nocheck     // Disable strict TypeScript for this route
-
+// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-// IMPORTANT FIX: change param signature ↓
-export async function GET(req: NextRequest, context: { params: { id: string }}) {
+export async function GET(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   const { id } = context.params;
 
   const supabase = createClient(
