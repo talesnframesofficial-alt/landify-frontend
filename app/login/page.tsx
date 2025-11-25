@@ -8,81 +8,66 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
 
-  // 1️⃣ Send OTP
   async function sendOTP() {
-    if (!phone) return alert("Enter phone number");
-
-    const { data, error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       phone: phone,
     });
 
     if (error) {
       alert(error.message);
-      return;
+    } else {
+      setOtpSent(true);
     }
-
-    setOtpSent(true);
-    alert("OTP sent to your phone!");
   }
 
-  // 2️⃣ Verify OTP
   async function verifyOTP() {
-    if (!otp) return alert("Enter OTP");
-
     const { data, error } = await supabase.auth.verifyOtp({
-      phone: phone,
+      phone,
       token: otp,
       type: "sms",
     });
 
     if (error) {
       alert(error.message);
-      return;
+    } else {
+      window.location.href = "/profile";
     }
-
-    // Redirect after login
-    window.location.href = "/profile";
   }
 
   return (
-    <div className="max-w-md mx-auto p-6 mt-10 bg-white rounded-xl shadow space-y-6">
+    <div className="p-6 max-w-md mx-auto space-y-4">
+      <h1 className="text-2xl font-bold mb-4">Login with Phone</h1>
 
-      <h1 className="text-2xl font-bold text-center">Login</h1>
-
-      {!otpSent && (
+      {!otpSent ? (
         <>
           <input
             type="text"
-            placeholder="Phone Number"
-            className="w-full border p-3 rounded-lg"
-            value={phone}
+            className="w-full border p-2 rounded-lg"
+            placeholder="Enter Phone Number"
             onChange={(e) => setPhone(e.target.value)}
           />
 
           <button
             onClick={sendOTP}
-            className="w-full bg-black text-white py-3 rounded-lg font-semibold"
+            className="w-full bg-black text-white p-3 rounded-lg"
           >
             Send OTP
           </button>
         </>
-      )}
-
-      {otpSent && (
+      ) : (
         <>
           <input
             type="text"
+            className="w-full border p-2 rounded-lg"
             placeholder="Enter OTP"
-            className="w-full border p-3 rounded-lg"
-            value={otp}
             onChange={(e) => setOtp(e.target.value)}
           />
 
           <button
             onClick={verifyOTP}
-            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold"
+            className="w-full bg-indigo-600 text-white p-3 rounded-lg"
           >
-            Verify & Login
+            Verify OTP
           </button>
         </>
       )}
