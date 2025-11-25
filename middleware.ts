@@ -3,10 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import type { NextRequest } from "next/server";
 
 export async function middleware(req: NextRequest) {
-  // Create a response object
   const res = NextResponse.next();
 
-  // Create server Supabase client
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -18,14 +16,13 @@ export async function middleware(req: NextRequest) {
         set(name: string, value: string, options: any) {
           res.cookies.set(name, value, options);
         },
-        remove(name: string, options: any) {
-          res.cookies.delete(name, options);
+        remove(name: string) {
+          res.cookies.delete(name);
         }
       }
     }
   );
 
-  // Refresh session
   await supabase.auth.getSession();
 
   return res;
