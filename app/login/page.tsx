@@ -5,71 +5,93 @@ import { supabase } from "@/utils/supabaseClient";
 
 export default function LoginPage() {
   const [phone, setPhone] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [sentTo, setSentTo] = useState("");
 
-  async function sendOTP() {
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: phone,
+  const sendOtp = async () => {
+    const fullPhone = "+91" + phone.trim();
+
+    const { data, error } = await supabase.auth.signInWithOtp({
+      phone: fullPhone,
     });
 
     if (error) {
       alert(error.message);
-    } else {
-      setOtpSent(true);
+      return;
     }
-  }
 
-  async function verifyOTP() {
+    setSentTo(fullPhone);
+    setStep("otp");
+  };
+
+  const verifyOtp = async () => {
     const { data, error } = await supabase.auth.verifyOtp({
-      phone,
+      phone: sentTo,
       token: otp,
       type: "sms",
     });
 
     if (error) {
       alert(error.message);
-    } else {
-      window.location.href = "/profile";
+      return;
     }
-  }
+
+    alert("Login successful!");
+    window.location.href = "/profile";
+  };
 
   return (
-    <div className="p-6 max-w-md mx-auto space-y-4">
-      <h1 className="text-2xl font-bold mb-4">Login with Phone</h1>
+    <div className="max-w-md mx-auto p-5">
+      <h1 className="text-2xl font-bold mb-4">Login</h1>
 
-      {!otpSent ? (
-        <>
-          <input
-            type="text"
-            className="w-full border p-2 rounded-lg"
-            placeholder="Enter Phone Number"
-            onChange={(e) => setPhone(e.target.value)}
-          />
+      {step === "phone" && (
+        <div className="space-y-4">
+          <label className="block font-medium">Phone Number</label>
+          <div className="flex gap-2">
+            <span className="p-2 border rounded bg-gray-100">+91</span>
+            <input
+              type="tel"
+              className="border p-2 rounded flex-1"
+              placeholder="10-digit number"
+              value={phone}
+              onChange={(e) =>
+                setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+              }
+            />
+          </div>
 
           <button
-            onClick={sendOTP}
-            className="w-full bg-black text-white p-3 rounded-lg"
+            onClick={sendOtp}
+            className="w-full bg-black text-white p-3 rounded"
           >
             Send OTP
           </button>
-        </>
-      ) : (
-        <>
+        </div>
+      )}
+
+      {step === "otp" && (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            OTP sent to <strong>{sentTo}</strong>
+          </p>
+
+          <label className="block font-medium">Enter OTP</label>
           <input
             type="text"
-            className="w-full border p-2 rounded-lg"
-            placeholder="Enter OTP"
-            onChange={(e) => setOtp(e.target.value)}
+            className="border p-2 rounded w-full"
+            placeholder="6 digit OTP"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
           />
 
           <button
-            onClick={verifyOTP}
-            className="w-full bg-indigo-600 text-white p-3 rounded-lg"
+            onClick={verifyOtp}
+            className="w-full bg-indigo-600 text-white p-3 rounded"
           >
             Verify OTP
           </button>
-        </>
+        </div>
       )}
     </div>
   );
