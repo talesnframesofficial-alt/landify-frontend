@@ -1,16 +1,10 @@
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/auth-helpers-nextjs";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 
-export default async function SellerProfile({ params }: { params: { id: string } }) {
-  const cookieStore = cookies();
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: () => cookieStore }
-  );
-
+export default async function SellerProfile({ params }: any) {
   const { id } = params;
+
+  const supabase = createServerComponentClient({ cookies });
 
   // Fetch seller details
   const { data: profile } = await supabase
@@ -28,16 +22,12 @@ export default async function SellerProfile({ params }: { params: { id: string }
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       
-      {/* Seller Info Card */}
       <div className="bg-white p-5 rounded-xl shadow">
         <h1 className="text-2xl font-bold">{profile?.full_name || "Seller"}</h1>
         <p className="text-slate-600">{profile?.city}</p>
-        <p className="text-sm text-slate-500 mt-2">
-          Joined: {profile?.created_at?.slice(0,10)}
-        </p>
+        <p className="text-sm text-slate-500 mt-2">Joined: {profile?.created_at?.slice(0,10)}</p>
       </div>
 
-      {/* Other ads from seller */}
       <h2 className="text-xl font-semibold">Ads by this Seller</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
