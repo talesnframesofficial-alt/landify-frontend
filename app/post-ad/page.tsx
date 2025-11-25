@@ -1,40 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Upload, XCircle } from "lucide-react";
+import { supabase } from "@/utils/supabaseClient";
+import { useRouter } from "next/navigation";
 
 export default function PostAdPage() {
+  const router = useRouter();
+
+  // User state
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Photo state
   const [photos, setPhotos] = useState<File[]>([]);
   const [preview, setPreview] = useState<string[]>([]);
 
-  // Handle image upload
+  // Check login on mount
+  useEffect(() => {
+    async function checkUser() {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) {
+        router.push("/login"); // redirect if not logged in
+        return;
+      }
+      setUserId(data.user.id); // store user_id
+    }
+    checkUser();
+  }, [router]);
+
+  // Handle photo upload
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const files = e.target.files;
-  if (!files) return;
+    const files = e.target.files;
+    if (!files) return;
 
-  const fileArray = Array.from(files) as File[];
+    const fileArray = Array.from(files) as File[];
 
-  if (photos.length + fileArray.length > 10) {
-    alert("You can upload a maximum of 10 photos.");
-    return;
-  }
+    if (photos.length + fileArray.length > 10) {
+      alert("You can upload a maximum of 10 photos.");
+      return;
+    }
 
-  setPhotos((prev: File[]) => [...prev, ...fileArray]);
+    setPhotos((prev: File[]) => [...prev, ...fileArray]);
 
-  const newPreviews = fileArray.map((file: File) =>
-    URL.createObjectURL(file)
-  );
+    const newPreviews = fileArray.map((file: File) =>
+      URL.createObjectURL(file)
+    );
 
-  setPreview((prev: string[]) => [...prev, ...newPreviews]);
-};
+    setPreview((prev: string[]) => [...prev, ...newPreviews]);
+  };
+
+  // Remove photo
   const removePhoto = (index: number) => {
-  setPhotos((prev: File[]) => prev.filter((_, i) => i !== index));
-  setPreview((prev: string[]) => prev.filter((_, i) => i !== index));
-};
+    setPhotos((prev: File[]) => prev.filter((_, i) => i !== index));
+    setPreview((prev: string[]) => prev.filter((_, i) => i !== index));
+  };
 
   // Submit Ad
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+
+    if (!userId) {
+      alert("You must be logged in to post an ad.");
+      return;
+    }
 
     // 1️⃣ Upload photos
     const formData = new FormData();
@@ -58,7 +86,7 @@ export default function PostAdPage() {
       category: e.target.category.value,
       latitude: null,
       longitude: null,
-      user_id: "TEMP_USER_ID", // replace after login flow
+      user_id: userId, // REAL USER ID
       photoUrls,
     };
 
@@ -68,6 +96,7 @@ export default function PostAdPage() {
     });
 
     alert("Ad posted successfully!");
+    router.push("/"); // Redirect to home after posting
   };
 
   return (
@@ -181,7 +210,6 @@ export default function PostAdPage() {
           </div>
         </div>
 
-        {/* Submit */}
         <button className="w-full bg-black text-white py-3 rounded-xl font-semibold text-lg">
           Post Ad
         </button>
