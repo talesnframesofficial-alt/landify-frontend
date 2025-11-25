@@ -4,11 +4,21 @@ import { useState } from "react";
 export function Navbar() {
   const [open, setOpen] = useState(false);
 
+  // Redirect user to login page
+  const goToLogin = () => {
+    window.location.href = "/login";
+  };
+
   return (
     <nav className="fixed top-0 w-full bg-white shadow-sm z-50 h-16 flex items-center">
       <div className="container mx-auto flex justify-between items-center px-4">
 
-        <div className="font-bold text-xl">Landify</div>
+        <div
+          className="font-bold text-xl cursor-pointer"
+          onClick={() => (window.location.href = "/")}
+        >
+          Landify
+        </div>
 
         {/* Desktop Category Menu */}
         <div className="hidden md:flex gap-4">
@@ -19,7 +29,10 @@ export function Navbar() {
         </div>
 
         {/* Desktop Login */}
-        <button className="hidden md:block px-4 py-2 bg-black text-white rounded-md">
+        <button
+          onClick={goToLogin}
+          className="hidden md:block px-4 py-2 bg-black text-white rounded-md"
+        >
           Login
         </button>
 
@@ -40,7 +53,10 @@ export function Navbar() {
           <button className="w-full p-2 rounded bg-slate-100">Commercial</button>
           <button className="w-full p-2 rounded bg-slate-100">Industrial</button>
 
-          <button className="w-full p-2 bg-black text-white rounded-md">
+          <button
+            onClick={goToLogin}
+            className="w-full p-2 bg-black text-white rounded-md"
+          >
             Login
           </button>
         </div>
