@@ -27,6 +27,10 @@ export default function PostAdPage() {
 
   setPreview((prev: string[]) => [...prev, ...newPreviews]);
 };
+  const removePhoto = (index: number) => {
+  setPhotos((prev: File[]) => prev.filter((_, i) => i !== index));
+  setPreview((prev: string[]) => prev.filter((_, i) => i !== index));
+};
 
   // Submit Ad
   const handleSubmit = async (e: any) => {
