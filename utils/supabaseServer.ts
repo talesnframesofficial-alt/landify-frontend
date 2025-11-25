@@ -9,8 +9,8 @@ export function supabaseServer() {
       cookies: {
         get(name: string) {
           return cookies().get(name)?.value;
-        },
-      },
+        }
+      }
     }
   );
 }
