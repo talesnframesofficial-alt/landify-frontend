@@ -8,26 +8,25 @@ export default function PostAdPage() {
   const [preview, setPreview] = useState<string[]>([]);
 
   // Handle image upload
-  const handlePhotoUpload = (e: any) => {
-    const files = Array.from(e.target.files);
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = e.target.files;
+  if (!files) return;
 
-    if (photos.length + files.length > 10) {
-      alert("You can upload a maximum of 10 photos.");
-      return;
-    }
+  const fileArray = Array.from(files) as File[];
 
-    setPhotos((prev) => [...prev, ...files]);
+  if (photos.length + fileArray.length > 10) {
+    alert("You can upload a maximum of 10 photos.");
+    return;
+  }
 
-    const newPreviews = files.map((file: any) =>
-      URL.createObjectURL(file)
-    );
-    setPreview((prev) => [...prev, ...newPreviews]);
-  };
+  setPhotos((prev: File[]) => [...prev, ...fileArray]);
 
-  const removePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
-    setPreview((prev) => prev.filter((_, i) => i !== index));
-  };
+  const newPreviews = fileArray.map((file: File) =>
+    URL.createObjectURL(file)
+  );
+
+  setPreview((prev: string[]) => [...prev, ...newPreviews]);
+};
 
   // Submit Ad
   const handleSubmit = async (e: any) => {
