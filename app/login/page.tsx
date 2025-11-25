@@ -3,67 +3,88 @@
 import { useState } from "react";
 import { supabase } from "@/utils/supabaseClient";
 
-export default function Login() {
+export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
 
-  const sendOtp = async () => {
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: "+91" + phone,
+  // 1️⃣ Send OTP
+  async function sendOTP() {
+    if (!phone) return alert("Enter phone number");
+
+    const { data, error } = await supabase.auth.signInWithOtp({
+      phone: phone,
     });
 
-    if (error) alert(error.message);
-    else setOtpSent(true);
-  };
+    if (error) {
+      alert(error.message);
+      return;
+    }
 
-  const verifyOtp = async () => {
+    setOtpSent(true);
+    alert("OTP sent to your phone!");
+  }
+
+  // 2️⃣ Verify OTP
+  async function verifyOTP() {
+    if (!otp) return alert("Enter OTP");
+
     const { data, error } = await supabase.auth.verifyOtp({
-      phone: "+91" + phone,
+      phone: phone,
       token: otp,
       type: "sms",
     });
 
-    if (error) alert(error.message);
-    else window.location.href = "/profile";
-  };
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    // Redirect after login
+    window.location.href = "/profile";
+  }
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-md">
-      <h1 className="text-2xl font-bold mb-4">Login / Signup</h1>
+    <div className="max-w-md mx-auto p-6 mt-10 bg-white rounded-xl shadow space-y-6">
 
-      {!otpSent ? (
-        <div className="space-y-4">
+      <h1 className="text-2xl font-bold text-center">Login</h1>
+
+      {!otpSent && (
+        <>
           <input
-            className="border p-3 w-full rounded-lg"
-            placeholder="Phone number (10 digits)"
+            type="text"
+            placeholder="Phone Number"
+            className="w-full border p-3 rounded-lg"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
 
           <button
-            className="bg-black text-white w-full p-3 rounded-lg"
-            onClick={sendOtp}
+            onClick={sendOTP}
+            className="w-full bg-black text-white py-3 rounded-lg font-semibold"
           >
             Send OTP
           </button>
-        </div>
-      ) : (
-        <div className="space-y-4">
+        </>
+      )}
+
+      {otpSent && (
+        <>
           <input
-            className="border p-3 w-full rounded-lg"
+            type="text"
             placeholder="Enter OTP"
+            className="w-full border p-3 rounded-lg"
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
           />
 
           <button
-            className="bg-green-600 text-white w-full p-3 rounded-lg"
-            onClick={verifyOtp}
+            onClick={verifyOTP}
+            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold"
           >
-            Verify OTP
+            Verify & Login
           </button>
-        </div>
+        </>
       )}
     </div>
   );
