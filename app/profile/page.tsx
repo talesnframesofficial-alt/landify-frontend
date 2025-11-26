@@ -10,6 +10,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
+  // 🔹 Load logged-in user + profile
   async function loadProfile() {
     setLoading(true);
 
@@ -22,20 +23,26 @@ export default function ProfilePage() {
       return;
     }
 
-    const { data } = await supabase
+    // Fetch profile row
+    const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", user.id)
       .single();
 
-    setProfile({
-      ...data,
-      email: user.email, // private
-      phone: user.phone, // private
-    });
+    if (error) console.error(error);
 
-    if (data?.avatar_url) {
-      setAvatarPreview(data.avatar_url);
+    const mergedProfile = {
+      ...data,
+      email: user.email || data?.email, // fallback
+      phone: user.phone || data?.phone,
+    };
+
+    setProfile(mergedProfile);
+
+    // Preview avatar
+    if (mergedProfile?.avatar_url) {
+      setAvatarPreview(mergedProfile.avatar_url);
     }
 
     setLoading(false);
@@ -45,53 +52,61 @@ export default function ProfilePage() {
     loadProfile();
   }, []);
 
-  async function updateProfile(e: any) {
-    e.preventDefault();
-    setLoading(true);
-
-    const full_name = e.target.full_name.value;
-    const bio = e.target.bio.value;
-
-    await supabase
-      .from("profiles")
-      .update({ full_name, bio })
-      .eq("id", profile.id);
-
-    alert("Profile updated!");
-    setLoading(false);
-  }
-
+  // 🔹 Update avatar
   async function uploadAvatar(e: any) {
     const file = e.target.files[0];
     if (!file) return;
 
     const fileName = `${profile.id}-${Date.now()}`;
 
-    const { data, error } = await supabase.storage
+    const { error: uploadErr } = await supabase.storage
       .from("avatars")
       .upload(fileName, file);
 
-    if (error) {
-      alert("Upload failed");
+    if (uploadErr) {
+      alert("Failed to upload photo");
       return;
     }
 
-    const url = supabase.storage.from("avatars").getPublicUrl(fileName).data?.publicUrl;
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("avatars").getPublicUrl(fileName);
 
     await supabase
       .from("profiles")
-      .update({ avatar_url: url })
+      .update({ avatar_url: publicUrl })
       .eq("id", profile.id);
 
-    setAvatarPreview(url);
+    setAvatarPreview(publicUrl);
   }
 
-  if (loading) return <p className="text-center mt-20">Loading Profile...</p>;
+  // 🔹 Update profile fields
+  async function updateProfile(e: any) {
+    e.preventDefault();
+    setLoading(true);
+
+    const updates = {
+      full_name: e.target.full_name.value,
+      bio: e.target.bio.value,
+      city: e.target.city.value,
+      email: profile.email,
+      phone: profile.phone,
+    };
+
+    await supabase.from("profiles").update(updates).eq("id", profile.id);
+
+    alert("Profile updated!");
+    setLoading(false);
+  }
+
+  if (loading) {
+    return <p className="text-center mt-20">Loading Profile...</p>;
+  }
 
   return (
     <div className="max-w-xl mx-auto px-5 py-6 space-y-6">
 
-      {/* Avatar */}
+      {/* ---------- Avatar + Basic ---------- */}
       <div className="flex items-center gap-4">
         <div className="relative w-20 h-20">
           <img
@@ -107,14 +122,19 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold">{profile.full_name || "Unnamed User"}</h2>
-          <p className="text-sm text-slate-500">{profile.email}</p>
+          <h2 className="text-xl font-semibold">
+            {profile.full_name || "New User"}
+          </h2>
+          <p className="text-sm text-slate-500">{profile.email || "No email"}</p>
         </div>
       </div>
 
-      {/* Edit Form */}
-      <form onSubmit={updateProfile} className="space-y-4 bg-white p-5 rounded-xl shadow">
-
+      {/* ---------- Edit Profile Form ---------- */}
+      <form
+        onSubmit={updateProfile}
+        className="space-y-4 bg-white p-5 rounded-xl shadow"
+      >
+        {/* Full Name */}
         <div>
           <label className="font-semibold">Full Name</label>
           <input
@@ -122,24 +142,36 @@ export default function ProfilePage() {
             name="full_name"
             defaultValue={profile.full_name || ""}
             className="w-full border p-2 rounded-lg"
-            placeholder="Your name"
           />
         </div>
 
+        {/* Bio */}
         <div>
           <label className="font-semibold">About You</label>
           <textarea
             name="bio"
-            className="w-full border p-2 rounded-lg"
             rows={3}
             defaultValue={profile.bio || ""}
-            placeholder="A short bio..."
+            className="w-full border p-2 rounded-lg"
+            placeholder="Write something about yourself..."
           />
         </div>
 
-        {/* Private fields */}
+        {/* City */}
+        <div>
+          <label className="font-semibold">City</label>
+          <input
+            type="text"
+            name="city"
+            defaultValue={profile.city || ""}
+            className="w-full border p-2 rounded-lg"
+            placeholder="Chennai, Coimbatore, etc."
+          />
+        </div>
+
+        {/* Private Fields */}
         <div className="bg-slate-50 p-3 rounded-lg text-sm border">
-          <p className="text-slate-600">📌 Private Information (not shown to users):</p>
+          <p className="text-slate-600 font-semibold">Private Information</p>
           <p>Email: {profile.email || "-"}</p>
           <p>Phone: {profile.phone || "-"}</p>
         </div>
