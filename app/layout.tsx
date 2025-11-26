@@ -1,6 +1,7 @@
 import "../styles/globals.css";
 import { Navbar } from "../components/Navbar";
 import MobileNav from "../components/MobileNav";
+import { SupabaseProvider } from "../components/SupabaseProvider";
 
 export default function RootLayout({
   children,
@@ -10,16 +11,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-white text-slate-800">
-        {/* TOP NAVBAR */}
-        <Navbar />
+        <SupabaseProvider>
+          {/* TOP NAVBAR */}
+          <Navbar />
 
-        {/* MAIN CONTENT AREA */}
-        {/* Added extra pb-24 so bottom nav doesn't cover content */}
-        <main className="pt-20 pb-24">{children}</main>
+          {/* MAIN CONTENT AREA */}
+          <main className="pt-20 pb-24">{children}</main>
 
-        {/* MOBILE BOTTOM NAVBAR */}
-        <MobileNav />
+          {/* MOBILE BOTTOM NAVBAR */}
+          <MobileNav />
+        </SupabaseProvider>
       </body>
     </html>
   );
 }
+
