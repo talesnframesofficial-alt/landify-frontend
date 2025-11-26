@@ -15,20 +15,20 @@ export default function PostAdPage() {
   const [photos, setPhotos] = useState<File[]>([]);
   const [preview, setPreview] = useState<string[]>([]);
 
-  // Check login on mount
+  // Check login
   useEffect(() => {
     async function checkUser() {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
-        router.push("/login"); // redirect if not logged in
+        router.push("/login");
         return;
       }
-      setUserId(data.user.id); // store user_id
+      setUserId(data.user.id); // store user id
     }
     checkUser();
   }, [router]);
 
-  // Handle photo upload
+  // Handle photo upload selection
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -36,26 +36,23 @@ export default function PostAdPage() {
     const fileArray = Array.from(files) as File[];
 
     if (photos.length + fileArray.length > 10) {
-      alert("You can upload a maximum of 10 photos.");
+      alert("You can upload maximum 10 photos");
       return;
     }
 
-    setPhotos((prev: File[]) => [...prev, ...fileArray]);
+    setPhotos((prev) => [...prev, ...fileArray]);
 
-    const newPreviews = fileArray.map((file: File) =>
-      URL.createObjectURL(file)
-    );
-
-    setPreview((prev: string[]) => [...prev, ...newPreviews]);
+    const newPreviews = fileArray.map((file) => URL.createObjectURL(file));
+    setPreview((prev) => [...prev, ...newPreviews]);
   };
 
   // Remove photo
   const removePhoto = (index: number) => {
-    setPhotos((prev: File[]) => prev.filter((_, i) => i !== index));
-    setPreview((prev: string[]) => prev.filter((_, i) => i !== index));
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+    setPreview((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Submit Ad
+  // Submit Listing
   const handleSubmit = async (e: any) => {
     e.preventDefault();
 
@@ -64,19 +61,28 @@ export default function PostAdPage() {
       return;
     }
 
-    // 1️⃣ Upload photos
-    const formData = new FormData();
-    photos.forEach((p) => formData.append("files", p));
+    // 1️⃣ Upload photos to Supabase Storage → listing-images bucket
+    const photoUrls: string[] = [];
 
-    const uploadRes = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
+    if (photos.length > 0) {
+      const formData = new FormData();
+      photos.forEach((p) => formData.append("files", p));
 
-    const uploadData = await uploadRes.json();
-    const photoUrls = uploadData.urls;
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-    // 2️⃣ Submit listing data
+      const uploadData = await uploadRes.json();
+      if (uploadData.error) {
+        alert("Image upload failed!");
+        return;
+      }
+
+      photoUrls.push(...uploadData.urls);
+    }
+
+    // 2️⃣ Prepare listing object
     const body = {
       title: e.target.title.value,
       description: e.target.description.value,
@@ -84,19 +90,24 @@ export default function PostAdPage() {
       sqft: e.target.sqft.value,
       city: e.target.city.value,
       category: e.target.category.value,
-      latitude: null,
-      longitude: null,
-      user_id: userId, // REAL USER ID
-      photoUrls,
+      photoUrls, // ← correct key
     };
 
-    await fetch("/api/listings/create", {
+    // 3️⃣ Create listing via API
+    const res = await fetch("/api/listings/create", {
       method: "POST",
       body: JSON.stringify(body),
     });
 
-    alert("Ad posted successfully!");
-    router.push("/"); // Redirect to home after posting
+    const result = await res.json();
+
+    if (result.error) {
+      alert("Error: " + result.error);
+      return;
+    }
+
+    alert("Your listing has been posted!");
+    router.push("/");
   };
 
   return (
@@ -142,8 +153,9 @@ export default function PostAdPage() {
           </div>
         </div>
 
-        {/* Basic Inputs */}
+        {/* Basic Fields */}
         <div className="bg-white p-4 rounded-xl shadow-sm space-y-4">
+
           <div>
             <label className="font-semibold block mb-1">Ad Title</label>
             <input
@@ -174,7 +186,7 @@ export default function PostAdPage() {
                 name="price"
                 required
                 className="w-full border p-2 rounded-lg"
-                placeholder="e.g., 4500000"
+                placeholder="4500000"
               />
             </div>
 
@@ -185,7 +197,7 @@ export default function PostAdPage() {
                 name="sqft"
                 required
                 className="w-full border p-2 rounded-lg"
-                placeholder="e.g., 1200"
+                placeholder="1200"
               />
             </div>
           </div>
@@ -197,13 +209,16 @@ export default function PostAdPage() {
               name="city"
               required
               className="w-full border p-2 rounded-lg"
-              placeholder="Chennai, Coimbatore, etc."
+              placeholder="Chennai, Coimbatore..."
             />
           </div>
 
           <div>
             <label className="font-semibold block mb-1">Category</label>
-            <select name="category" className="w-full border p-2 rounded-lg">
+            <select
+              name="category"
+              className="w-full border p-2 rounded-lg"
+            >
               <option value="sale">For Sale</option>
               <option value="rent">For Rent</option>
             </select>
