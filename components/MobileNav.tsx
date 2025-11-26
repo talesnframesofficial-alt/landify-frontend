@@ -2,30 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { Home, Search, PlusCircle, MessageCircle, User } from "lucide-react";
-import { useSupabase } from "../components/SupabaseProvider";
+import { supabase } from "../utils/supabaseClient";
 
 export default function MobileNav() {
-  const { supabase } = useSupabase();
   const [user, setUser] = useState<any>(null);
 
-  // Load session on mount
+  // Check login state on mount
   useEffect(() => {
-    const load = async () => {
+    const checkSession = async () => {
       const { data } = await supabase.auth.getUser();
       setUser(data?.user || null);
     };
 
-    load();
-
-    // Listen for login/logout changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+    checkSession();
+  }, []);
 
   const go = (path: string) => {
     window.location.href = path;
@@ -36,23 +26,29 @@ export default function MobileNav() {
       <div className="flex justify-between items-center">
 
         {/* Home */}
-        <button onClick={() => go("/")} className="flex flex-col items-center text-slate-700">
+        <button
+          onClick={() => go("/")}
+          className="flex flex-col items-center text-slate-700"
+        >
           <Home className="w-6 h-6" />
           <span className="text-xs">Home</span>
         </button>
 
         {/* Search */}
-        <button onClick={() => go("/listing")} className="flex flex-col items-center text-slate-700">
+        <button
+          onClick={() => go("/listing")}
+          className="flex flex-col items-center text-slate-700"
+        >
           <Search className="w-6 h-6" />
           <span className="text-xs">Search</span>
         </button>
 
-        {/* POST AD BUTTON */}
+        {/* Post Ad */}
         <button
           onClick={() => go(user ? "/post-ad" : "/login")}
           className="flex flex-col items-center text-indigo-600"
         >
-          <PlusCircle className="w-10 h-10 text-indigo-600" />
+          <PlusCircle className="w-10 h-10" />
         </button>
 
         {/* Chat */}
@@ -70,7 +66,9 @@ export default function MobileNav() {
           className="flex flex-col items-center text-slate-700"
         >
           <User className="w-6 h-6" />
-          <span className="text-xs">Profile</span>
+          <span className="text-xs">
+            {user ? "Profile" : "Login"}
+          </span>
         </button>
 
       </div>
