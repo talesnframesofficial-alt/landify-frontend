@@ -1,13 +1,12 @@
 // utils/supabaseClient.ts
+// -----------------------------------------------------
+// This client is for SERVER/API ROUTES ONLY.
+// Frontend must use SupabaseProvider → useSupabase()
+// -----------------------------------------------------
+
 import { createClient } from "@supabase/supabase-js";
 
-export const supabase = createClient(
+export const supabaseServer = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  {
-    auth: {
-      persistSession: true,
-      storage: typeof window !== "undefined" ? localStorage : undefined,
-    },
-  }
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // backend-only
 );
