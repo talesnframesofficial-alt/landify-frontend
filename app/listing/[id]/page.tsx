@@ -1,28 +1,101 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { supabase } from "@/utils/supabaseClient";
 import { Heart, Phone, MessageCircle } from "lucide-react";
 
-export default function PropertyDetail() {
+// Day difference formatter
+function timeAgo(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diff === 0) return "Today";
+  if (diff === 1) return "1 day ago";
+  return `${diff} days ago`;
+}
+
+export default function ListingDetailPage() {
+  const { id } = useParams();
+  const [listing, setListing] = useState<any>(null);
+  const [owner, setOwner] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Load listing
+  useEffect(() => {
+    async function loadData() {
+      const { data: listingData } = await supabase
+        .from("listings")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (!listingData) {
+        setLoading(false);
+        return;
+      }
+
+      setListing(listingData);
+
+      // Load owner profile
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", listingData.user_id)
+        .single();
+
+      setOwner(profileData);
+      setLoading(false);
+    }
+
+    loadData();
+  }, [id]);
+
+  if (loading) return <p className="text-center mt-20">Loading...</p>;
+  if (!listing) return <p className="text-center mt-20">Listing not found</p>;
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
 
-      {/* IMAGE */}
-      <div className="relative w-full h-64 md:h-96 bg-slate-200 rounded-xl overflow-hidden">
-        <button className="absolute top-3 right-3 p-2 bg-white/90 rounded-full shadow">
+      {/* IMAGES */}
+      <div className="relative w-full h-64 md:h-96 rounded-xl overflow-hidden bg-slate-200">
+        {listing.images?.length > 0 ? (
+          <img
+            src={listing.images[0]}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-slate-300" />
+        )}
+
+        <button className="absolute top-3 right-3 p-2 bg-white rounded-full shadow">
           <Heart className="w-6 h-6 text-red-500" />
         </button>
       </div>
 
-      {/* PRICE + TITLE */}
+      {/* TITLE + PRICE */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl md:text-3xl font-bold">3BHK Luxury Villa</h1>
-        <span className="text-xl font-semibold text-green-600">₹ 65,00,000</span>
+        <h1 className="text-2xl font-bold">{listing.title}</h1>
+        <span className="text-xl font-semibold text-green-600">
+          ₹ {listing.price}
+        </span>
       </div>
 
-      {/* OWNER DETAILS */}
+      {/* CITY + CATEGORY */}
+      <p className="text-slate-600 text-sm">
+        {listing.city} • {listing.listing_type?.toUpperCase()}
+      </p>
+
+      {/* POSTED TIME */}
+      <p className="text-xs text-slate-500">Posted: {timeAgo(listing.created_at)}</p>
+
+      {/* OWNER */}
       <div className="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
         <div>
-          <p className="font-semibold">Owner: Senthil Kumar</p>
+          <p className="font-semibold">
+            Owner: {owner?.full_name || "Unknown User"}
+          </p>
           <p className="text-sm text-blue-600">✔ Verified Owner</p>
         </div>
 
@@ -30,32 +103,39 @@ export default function PropertyDetail() {
           <button className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg">
             <MessageCircle className="w-5 h-5" /> Chat
           </button>
-          <button className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg">
+
+          <a
+            href={`tel:${owner?.phone || ""}`}
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg"
+          >
             <Phone className="w-5 h-5" /> Call
-          </button>
+          </a>
         </div>
       </div>
 
       {/* DETAILS */}
       <div className="bg-white p-4 rounded-xl shadow-sm">
-        <h2 className="text-lg font-semibold mb-3">Property Details</h2>
+        <h2 className="text-lg font-semibold mb-3">Property Info</h2>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
             <p className="text-slate-500">Built-up Area</p>
-            <p className="font-semibold">2100 sqft</p>
+            <p className="font-semibold">{listing.sqft} sqft</p>
           </div>
+
           <div>
-            <p className="text-slate-500">Bedrooms</p>
-            <p className="font-semibold">3</p>
+            <p className="text-slate-500">Type</p>
+            <p className="font-semibold">{listing.listing_type}</p>
           </div>
+
           <div>
-            <p className="text-slate-500">Bathrooms</p>
-            <p className="font-semibold">3</p>
+            <p className="text-slate-500">City</p>
+            <p className="font-semibold">{listing.city}</p>
           </div>
+
           <div>
-            <p className="text-slate-500">Parking</p>
-            <p className="font-semibold">Yes</p>
+            <p className="text-slate-500">Listed On</p>
+            <p className="font-semibold">{new Date(listing.created_at).toLocaleDateString()}</p>
           </div>
         </div>
       </div>
@@ -64,34 +144,15 @@ export default function PropertyDetail() {
       <div className="bg-white p-4 rounded-xl shadow-sm">
         <h2 className="text-lg font-semibold mb-3">Description</h2>
         <p className="text-sm text-slate-700 leading-relaxed">
-          This 3BHK villa is located in a prime area near schools, hospitals,
-          and shopping centers. Recently renovated with premium fittings.
+          {listing.description}
         </p>
       </div>
 
-      {/* MAP */}
+      {/* MAP (future feature) */}
       <div className="bg-white p-4 rounded-xl shadow-sm">
-        <h2 className="text-lg font-semibold mb-3">Location on Map</h2>
+        <h2 className="text-lg font-semibold mb-3">Location</h2>
         <div className="w-full h-56 bg-slate-200 rounded-xl"></div>
       </div>
-
-      {/* SIMILAR LISTINGS */}
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Similar Listings</h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-xl shadow-sm hover:shadow-md transition">
-              <div className="h-40 bg-slate-200" />
-              <div className="p-3">
-                <h3 className="font-semibold">2BHK Apartment</h3>
-                <p className="text-sm text-slate-600">₹ 32,00,000 • Chennai</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
     </div>
   );
 }
