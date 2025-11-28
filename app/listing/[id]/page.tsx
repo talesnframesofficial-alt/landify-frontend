@@ -8,10 +8,13 @@ import {
   Heart,
   Phone,
   MessageCircle,
+  Pencil,
+  Trash2,
+  Upload
 } from "lucide-react";
 import { supabase } from "@/utils/supabaseClient";
 
-// Format "time ago"
+// ---------------- Time Ago Helper ----------------
 function timeAgo(dateString?: string) {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -24,7 +27,7 @@ function timeAgo(dateString?: string) {
   return date.toLocaleDateString();
 }
 
-// Convert image path → public URL
+// ---------------- Storage URL Resolver ----------------
 function resolveImageUrl(path: string) {
   if (!path) return "/placeholder.jpg";
   if (path.startsWith("http")) return path;
@@ -38,37 +41,35 @@ export default function ListingPage() {
   const { id: listingId } = useParams();
   const router = useRouter();
 
-  // Core states
   const [listing, setListing] = useState<any>(null);
   const [owner, setOwner] = useState<any>(null);
   const [similar, setSimilar] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
-  // Images
   const [images, setImages] = useState<string[]>([]);
   const [idx, setIdx] = useState(0);
 
-  // Zoom + Swipe
+  // zoom + gestures
   const [zoom, setZoom] = useState(1);
   const [startDist, setStartDist] = useState<number | null>(null);
   const [swipeStartX, setSwipeStartX] = useState<number | null>(null);
 
-  // FAVORITE system
+  // favourites
   const [isFav, setIsFav] = useState(false);
-  const [user, setUser] = useState<any>(null);
 
-  // Load everything
+  const [loading, setLoading] = useState(true);
+
+  // --------------------- LOAD LISTING ---------------------
   useEffect(() => {
     if (!listingId) return;
 
     async function load() {
       setLoading(true);
 
-      // Get current user
       const { data: userData } = await supabase.auth.getUser();
       setUser(userData.user);
 
-      // Fetch Listing
+      // Fetch listing
       const { data: listingData } = await supabase
         .from("listings")
         .select("*")
@@ -83,13 +84,13 @@ export default function ListingPage() {
 
       setListing(listingData);
 
-      // Load images
+      // Set images
       const dbImgs = Array.isArray(listingData.images)
         ? listingData.images.map(resolveImageUrl)
         : [];
       setImages(dbImgs.length ? dbImgs : ["/placeholder.jpg"]);
 
-      // Load owner
+      // Owner
       const { data: ownerData } = await supabase
         .from("profiles")
         .select("id, full_name, profile_photo, phone, city, bio")
@@ -97,7 +98,7 @@ export default function ListingPage() {
         .single();
       setOwner(ownerData || null);
 
-      // Load similar listings
+      // Similar listings
       const { data: simData } = await supabase
         .from("listings")
         .select("id, title, price, city, images, created_at")
@@ -105,9 +106,10 @@ export default function ListingPage() {
         .neq("id", listingId)
         .limit(4)
         .order("created_at", { ascending: false });
+
       setSimilar(simData || []);
 
-      // Check if favorite
+      // Favourite check
       if (userData.user) {
         const { data: fav } = await supabase
           .from("favorites")
@@ -125,31 +127,26 @@ export default function ListingPage() {
     load();
   }, [listingId]);
 
-  // Toggle Favourite
+  // --------------------- FAVOURITES ---------------------
   async function toggleFavorite() {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    if (!user) return router.push("/login");
 
     if (isFav) {
-      // REMOVE
-      const { data: favRow } = await supabase
+      const { data: fav } = await supabase
         .from("favorites")
         .select("id")
         .eq("user_id", user.id)
         .eq("listing_id", listingId)
         .single();
 
-      if (favRow) {
-        await supabase.from("favorites").delete().eq("id", favRow.id);
+      if (fav) {
+        await supabase.from("favorites").delete().eq("id", fav.id);
       }
 
       setIsFav(false);
       return;
     }
 
-    // ADD
     await supabase.from("favorites").insert({
       user_id: user.id,
       listing_id: listingId,
@@ -158,7 +155,7 @@ export default function ListingPage() {
     setIsFav(true);
   }
 
-  // Next/Prev images
+  // --------------------- IMAGE NAVIGATION ---------------------
   const next = () => {
     setZoom(1);
     setIdx((i) => (i + 1) % images.length);
@@ -168,18 +165,15 @@ export default function ListingPage() {
     setIdx((i) => (i - 1 + images.length) % images.length);
   };
 
-  // Call owner
+  // --------------------- OWNER ACTIONS ---------------------
   const onCall = () => {
-    if (!owner?.phone) {
-      alert("Phone not available");
-      return;
-    }
+    if (!owner?.phone) return alert("Phone not available");
     window.location.href = `tel:${owner.phone}`;
   };
 
   const onChat = () => router.push(`/chat/${listingId}`);
 
-  // Touch Events
+  // --------------------- TOUCH EVENTS ---------------------
   function handleTouchStart(e: any) {
     if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -195,7 +189,6 @@ export default function ListingPage() {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
-
       const newZoom = Math.min(Math.max((dist / startDist) * zoom, 1), 3);
       setZoom(newZoom);
       return;
@@ -203,7 +196,6 @@ export default function ListingPage() {
 
     if (e.touches.length === 1 && swipeStartX !== null) {
       const diff = e.touches[0].clientX - swipeStartX;
-
       if (Math.abs(diff) > 60) {
         diff > 0 ? prev() : next();
         setSwipeStartX(null);
@@ -211,11 +203,104 @@ export default function ListingPage() {
     }
   }
 
+  // --------------------- ADVANCED EDITOR ---------------------
+
+  /** Delete listing */
+  async function deleteListing() {
+    if (!confirm("Delete this listing?")) return;
+
+    // delete all images first
+    if (Array.isArray(listing.images)) {
+      await supabase.storage.from("listing-images").remove(listing.images);
+    }
+
+    await supabase.from("listings").delete().eq("id", listingId);
+
+    alert("Listing deleted");
+    router.push("/my-ads");
+  }
+
+  /** Replace a single image */
+  async function replaceImage(index: number, file: File | null) {
+    if (!file) return;
+
+    const filename = `${listingId}/${Date.now()}-${file.name}`;
+
+    // Upload new file
+    const { error: upErr } = await supabase.storage
+      .from("listing-images")
+      .upload(filename, file);
+    if (upErr) return alert("Upload failed");
+
+    // Delete old file
+    const old = listing.images[index];
+    await supabase.storage.from("listing-images").remove([old]);
+
+    // Update DB
+    const updated = [...listing.images];
+    updated[index] = filename;
+
+    await supabase.from("listings").update({
+      images: updated,
+    }).eq("id", listingId);
+
+    // update UI
+    listing.images = updated;
+    setImages(updated.map(resolveImageUrl));
+  }
+
+  /** Add new photos */
+  async function addPhotos(files: FileList | null) {
+    if (!files) return;
+    const arr = Array.from(files);
+
+    if (listing.images.length + arr.length > 10) {
+      return alert("Max 10 photos allowed");
+    }
+
+    const newPaths: string[] = [];
+
+    for (const f of arr) {
+      const name = `${listingId}/${Date.now()}-${f.name}`;
+      await supabase.storage.from("listing-images").upload(name, f);
+      newPaths.push(name);
+    }
+
+    const final = [...listing.images, ...newPaths];
+
+    await supabase.from("listings").update({
+      images: final,
+    }).eq("id", listingId);
+
+    listing.images = final;
+    setImages(final.map(resolveImageUrl));
+  }
+
+  /** Remove a photo */
+  async function removePhoto(index: number) {
+    if (!confirm("Remove this photo?")) return;
+
+    await supabase.storage.from("listing-images").remove([listing.images[index]]);
+
+    const updated = listing.images.filter((_: any, i: number) => i !== index);
+
+    await supabase.from("listings").update({
+      images: updated
+    }).eq("id", listingId);
+
+    listing.images = updated;
+    setImages(updated.map(resolveImageUrl));
+  }
+
+  // --------------------- RENDER ---------------------
   if (loading) return <p className="text-center mt-20">Loading...</p>;
   if (!listing) return <p className="text-center mt-20">Listing not found</p>;
 
+  const isOwner = user && user.id === listing.user_id;
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
+
       {/* IMAGE VIEWER */}
       <div
         className="relative w-full h-64 md:h-96 bg-black rounded-xl overflow-hidden touch-none"
@@ -227,10 +312,9 @@ export default function ListingPage() {
           src={images[idx]}
           className="w-full h-full object-contain transition-all"
           style={{ transform: `scale(${zoom})` }}
-          onDoubleClick={() => setZoom(zoom === 1 ? 2 : 1)}
         />
 
-        {/* Prev/Next */}
+        {/* Nav */}
         {images.length > 1 && (
           <>
             <button
@@ -247,42 +331,100 @@ export default function ListingPage() {
               <ArrowRight />
             </button>
 
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/60 text-white rounded-full text-xs">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white px-3 py-1 text-xs rounded-full">
               {idx + 1}/{images.length}
             </div>
           </>
         )}
 
-        {/* FAV BUTTON */}
+        {/* Favourite */}
         <button
-          className="absolute top-3 right-3 bg-white/90 p-2 rounded-full shadow"
           onClick={toggleFavorite}
+          className="absolute top-3 right-3 bg-white/90 p-2 rounded-full shadow"
         >
           <Heart
-            className={`w-6 h-6 ${
-              isFav ? "text-red-500" : "text-gray-400"
-            }`}
+            className={`w-6 h-6 ${isFav ? "text-red-500" : "text-gray-400"}`}
             fill={isFav ? "red" : "none"}
           />
         </button>
       </div>
 
-      {/* THUMBNAILS */}
-      <div className="flex gap-2 overflow-x-auto">
-        {images.map((img, i) => (
-          <img
-            key={i}
-            src={img}
-            onClick={() => {
-              setZoom(1);
-              setIdx(i);
-            }}
-            className={`w-16 h-16 rounded-lg object-cover cursor-pointer border ${
-              i === idx ? "border-black" : "border-transparent"
-            }`}
-          />
-        ))}
-      </div>
+
+      {/* ---------------- OWNER TOOLS (ADVANCED EDITOR) ---------------- */}
+      {isOwner && (
+        <div className="bg-white p-4 rounded-xl shadow space-y-4">
+
+          <h2 className="text-lg font-semibold">Manage Photos</h2>
+
+          {/* Existing photos */}
+          <div className="grid grid-cols-3 gap-3">
+            {listing.images.map((img: string, index: number) => (
+              <div key={index} className="relative">
+                <img
+                  src={resolveImageUrl(img)}
+                  className="h-28 w-full object-cover rounded-lg"
+                />
+
+                <div className="mt-1 flex gap-1">
+                  {/* Replace button */}
+                  <label className="flex-1 bg-slate-100 p-1 text-xs text-center rounded cursor-pointer">
+                    Replace
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        replaceImage(index, e.target.files?.[0] || null)
+                      }
+                    />
+                  </label>
+
+                  {/* Delete button */}
+                  <button
+                    onClick={() => removePhoto(index)}
+                    className="flex-1 bg-red-600 text-white text-xs p-1 rounded"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Add new photos */}
+          <div>
+            <label className="font-semibold block mb-1">Add More Photos</label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => addPhotos(e.target.files)}
+              className="p-2 border rounded w-full"
+            />
+          </div>
+
+          {/* Full Edit Page */}
+          <button
+            onClick={() => router.push(`/listing/edit/${listingId}`)}
+            className="w-full bg-black text-white py-3 rounded-xl flex items-center justify-center gap-2 mt-3"
+          >
+            <Pencil className="w-5 h-5" />
+            Full Edit Page
+          </button>
+
+          {/* Delete Listing */}
+          <button
+            onClick={deleteListing}
+            className="w-full bg-red-600 text-white py-3 rounded-xl flex items-center justify-center gap-2"
+          >
+            <Trash2 className="w-5 h-5" />
+            Delete Listing
+          </button>
+        </div>
+      )}
+
+      {/* TITLE, PRICE, OWNER INFO, SIMILAR LISTINGS (UNCHANGED) */}
+      {/* ---------- Your existing content continues below ---------- */}
 
       {/* TITLE + PRICE */}
       <div className="flex justify-between items-start">
@@ -307,6 +449,7 @@ export default function ListingPage() {
             }
             className="w-14 h-14 rounded-full object-cover border"
           />
+
           <div>
             <p className="font-semibold">{owner?.full_name || "User"}</p>
             <p className="text-sm text-slate-500">{owner?.city || ""}</p>
@@ -358,18 +501,20 @@ export default function ListingPage() {
                   }
                   className="w-full h-32 object-cover rounded-t-xl"
                 />
+
                 <div className="p-3">
                   <p className="font-semibold">{s.title}</p>
                   <p className="text-sm text-slate-600">₹ {s.price}</p>
-                  <p className="text-xs text-slate-500">{timeAgo(
-                    s.created_at
-                  )}</p>
+                  <p className="text-xs text-slate-500">
+                    {timeAgo(s.created_at)}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
         </div>
       )}
+
     </div>
   );
 }
