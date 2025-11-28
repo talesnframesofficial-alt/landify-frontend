@@ -1,29 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/utils/supabaseClient";
+import { useSupabase } from "@/components/SupabaseProvider";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const [phone, setPhone] = useState("+91");
+  const { supabase } = useSupabase();
+  const router = useRouter();
+
+  const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+
+  // -----------------------
+  // FORMAT PHONE TO +91
+  // -----------------------
+  function formatPhone(input: string) {
+    let cleaned = input.replace(/\D/g, "");
+    if (!cleaned.startsWith("91")) cleaned = "91" + cleaned;
+    return "+" + cleaned;
+  }
 
   // -----------------------
   // SEND OTP
   // -----------------------
   async function sendOTP() {
-    if (!phone || phone.length < 10) {
-      alert("Enter a valid phone number");
+    if (phone.length < 10) {
+      alert("Enter your 10-digit mobile number");
       return;
     }
+
+    const formatted = formatPhone(phone);
 
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithOtp({
-      phone,
+      phone: formatted,
     });
 
     setLoading(false);
@@ -40,15 +53,17 @@ export default function LoginPage() {
   // VERIFY OTP
   // -----------------------
   async function verifyOTP() {
-    if (!otp || otp.length < 4) {
-      alert("Enter the OTP");
+    if (otp.length < 4) {
+      alert("Enter valid OTP");
       return;
     }
+
+    const formatted = formatPhone(phone);
 
     setLoading(true);
 
     const { data, error } = await supabase.auth.verifyOtp({
-      phone,
+      phone: formatted,
       token: otp,
       type: "sms",
     });
@@ -60,24 +75,26 @@ export default function LoginPage() {
       return;
     }
 
-    // SUCCESS → Redirect to Profile
+    // Success → redirect
     router.push("/profile");
   }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6">
+
       <h1 className="text-2xl font-bold mb-6">Login</h1>
 
       {/* PHONE INPUT */}
       {!otpSent && (
         <div className="w-full max-w-sm space-y-4">
-          <label className="block font-semibold">Phone Number</label>
+          <label className="font-semibold">Mobile Number</label>
+
           <input
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="w-full border p-3 rounded-lg"
-            placeholder="+91 9876543210"
+            placeholder="9876543210"
           />
 
           <button
@@ -85,7 +102,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-black text-white py-3 rounded-lg font-semibold"
           >
-            {loading ? "Sending..." : "Send OTP"}
+            {loading ? "Sending OTP..." : "Send OTP"}
           </button>
         </div>
       )}
@@ -93,12 +110,13 @@ export default function LoginPage() {
       {/* OTP INPUT */}
       {otpSent && (
         <div className="w-full max-w-sm space-y-4">
-          <label className="block font-semibold">Enter OTP</label>
+          <label className="font-semibold">Enter OTP</label>
+
           <input
             type="number"
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
-            className="w-full border p-3 rounded-lg tracking-widest text-center text-xl"
+            className="w-full border p-3 rounded-lg text-center tracking-widest text-xl"
             placeholder="123456"
           />
 
@@ -108,6 +126,13 @@ export default function LoginPage() {
             className="w-full bg-black text-white py-3 rounded-lg font-semibold"
           >
             {loading ? "Verifying..." : "Verify OTP"}
+          </button>
+
+          <button
+            onClick={() => setOtpSent(false)}
+            className="w-full text-slate-600 text-sm underline mt-2"
+          >
+            Edit phone number
           </button>
         </div>
       )}
