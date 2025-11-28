@@ -7,22 +7,33 @@ import { useSupabase } from "./SupabaseProvider";
 export default function MobileNav() {
   const { supabase } = useSupabase();
   const [user, setUser] = useState<any>(null);
+  const [profilePic, setProfilePic] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       const { data } = await supabase.auth.getUser();
       setUser(data.user);
+
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("profile_photo")
+          .eq("id", data.user.id)
+          .single();
+
+        if (profile?.profile_photo) setProfilePic(profile.profile_photo);
+      }
     }
+
     load();
 
-    // Auto-update on login/logout
     const { data: listener } = supabase.auth.onAuthStateChange(() => load());
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [supabase]);
 
   const go = (path: string) => (window.location.href = path);
 
-  // Helper: If not logged in → force login
+  // 🔒 Protected navigation
   const protectedRoute = (path: string) => {
     if (!user) go("/login");
     else go(path);
@@ -66,7 +77,14 @@ export default function MobileNav() {
           onClick={() => protectedRoute("/profile")}
           className="flex flex-col items-center text-slate-700"
         >
-          <User className="w-6 h-6" />
+          {profilePic ? (
+            <img
+              src={profilePic}
+              className="w-6 h-6 rounded-full object-cover border"
+            />
+          ) : (
+            <User className="w-6 h-6" />
+          )}
           <span className="text-xs">{user ? "Profile" : "Login"}</span>
         </button>
 
