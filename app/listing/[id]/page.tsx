@@ -27,7 +27,6 @@ function timeAgo(dateString?: string) {
 // Convert image path → public URL
 function resolveImageUrl(path: string) {
   if (!path) return "/placeholder.jpg";
-
   if (path.startsWith("http")) return path;
 
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/listing-images/${encodeURIComponent(
@@ -39,19 +38,24 @@ export default function ListingPage() {
   const { id: listingId } = useParams();
   const router = useRouter();
 
-  // States
+  // Core states
   const [listing, setListing] = useState<any>(null);
   const [owner, setOwner] = useState<any>(null);
   const [similar, setSimilar] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Images & Viewer Controls
+  // Images
   const [images, setImages] = useState<string[]>([]);
   const [idx, setIdx] = useState(0);
 
+  // Zoom + Swipe
   const [zoom, setZoom] = useState(1);
   const [startDist, setStartDist] = useState<number | null>(null);
   const [swipeStartX, setSwipeStartX] = useState<number | null>(null);
+
+  // FAVORITE system
+  const [isFav, setIsFav] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   // Load everything
   useEffect(() => {
@@ -60,7 +64,11 @@ export default function ListingPage() {
     async function load() {
       setLoading(true);
 
-      // Fetch listing
+      // Get current user
+      const { data: userData } = await supabase.auth.getUser();
+      setUser(userData.user);
+
+      // Fetch Listing
       const { data: listingData } = await supabase
         .from("listings")
         .select("*")
@@ -75,25 +83,21 @@ export default function ListingPage() {
 
       setListing(listingData);
 
-      // Prepare images
-      const databaseImages = Array.isArray(listingData.images)
+      // Load images
+      const dbImgs = Array.isArray(listingData.images)
         ? listingData.images.map(resolveImageUrl)
         : [];
+      setImages(dbImgs.length ? dbImgs : ["/placeholder.jpg"]);
 
-      setImages(
-        databaseImages.length > 0 ? databaseImages : ["/placeholder.jpg"]
-      );
-
-      // Fetch owner
+      // Load owner
       const { data: ownerData } = await supabase
         .from("profiles")
         .select("id, full_name, profile_photo, phone, city, bio")
         .eq("id", listingData.user_id)
         .single();
-
       setOwner(ownerData || null);
 
-      // Fetch similar listings
+      // Load similar listings
       const { data: simData } = await supabase
         .from("listings")
         .select("id, title, price, city, images, created_at")
@@ -101,8 +105,19 @@ export default function ListingPage() {
         .neq("id", listingId)
         .limit(4)
         .order("created_at", { ascending: false });
-
       setSimilar(simData || []);
+
+      // Check if favorite
+      if (userData.user) {
+        const { data: fav } = await supabase
+          .from("favorites")
+          .select("*")
+          .eq("user_id", userData.user.id)
+          .eq("listing_id", listingId)
+          .maybeSingle();
+
+        setIsFav(!!fav);
+      }
 
       setLoading(false);
     }
@@ -110,7 +125,40 @@ export default function ListingPage() {
     load();
   }, [listingId]);
 
-  // Move images
+  // Toggle Favourite
+  async function toggleFavorite() {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    if (isFav) {
+      // REMOVE
+      const { data: favRow } = await supabase
+        .from("favorites")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("listing_id", listingId)
+        .single();
+
+      if (favRow) {
+        await supabase.from("favorites").delete().eq("id", favRow.id);
+      }
+
+      setIsFav(false);
+      return;
+    }
+
+    // ADD
+    await supabase.from("favorites").insert({
+      user_id: user.id,
+      listing_id: listingId,
+    });
+
+    setIsFav(true);
+  }
+
+  // Next/Prev images
   const next = () => {
     setZoom(1);
     setIdx((i) => (i + 1) % images.length);
@@ -121,20 +169,17 @@ export default function ListingPage() {
   };
 
   // Call owner
-  function onCall() {
+  const onCall = () => {
     if (!owner?.phone) {
       alert("Phone not available");
       return;
     }
     window.location.href = `tel:${owner.phone}`;
-  }
+  };
 
-  // Chat redirect
-  function onChat() {
-    router.push(`/chat/${listingId}`);
-  }
+  const onChat = () => router.push(`/chat/${listingId}`);
 
-  // Zoom logic
+  // Touch Events
   function handleTouchStart(e: any) {
     if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -180,42 +225,45 @@ export default function ListingPage() {
       >
         <img
           src={images[idx]}
-          className="w-full h-full object-contain transition-all duration-200"
-          style={{
-            transform: `scale(${zoom})`,
-          }}
+          className="w-full h-full object-contain transition-all"
+          style={{ transform: `scale(${zoom})` }}
           onDoubleClick={() => setZoom(zoom === 1 ? 2 : 1)}
         />
 
-        {/* Arrows */}
+        {/* Prev/Next */}
         {images.length > 1 && (
           <>
             <button
               onClick={prev}
-              className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow"
+              className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft />
             </button>
 
             <button
               onClick={next}
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow"
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full"
             >
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight />
             </button>
 
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white px-3 py-1 rounded-full text-xs">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/60 text-white rounded-full text-xs">
               {idx + 1}/{images.length}
             </div>
           </>
         )}
 
-        {/* Favourite */}
+        {/* FAV BUTTON */}
         <button
           className="absolute top-3 right-3 bg-white/90 p-2 rounded-full shadow"
-          onClick={() => alert("Saved to favourites!")}
+          onClick={toggleFavorite}
         >
-          <Heart className="w-6 h-6 text-red-500" />
+          <Heart
+            className={`w-6 h-6 ${
+              isFav ? "text-red-500" : "text-gray-400"
+            }`}
+            fill={isFav ? "red" : "none"}
+          />
         </button>
       </div>
 
@@ -313,9 +361,9 @@ export default function ListingPage() {
                 <div className="p-3">
                   <p className="font-semibold">{s.title}</p>
                   <p className="text-sm text-slate-600">₹ {s.price}</p>
-                  <p className="text-xs text-slate-500">
-                    {timeAgo(s.created_at)}
-                  </p>
+                  <p className="text-xs text-slate-500">{timeAgo(
+                    s.created_at
+                  )}</p>
                 </div>
               </div>
             ))}
