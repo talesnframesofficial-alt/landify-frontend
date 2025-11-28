@@ -2,20 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { Upload, XCircle } from "lucide-react";
-import { supabase } from "@/utils/supabaseClient";
 import { useRouter } from "next/navigation";
+import { useSupabase } from "@/components/SupabaseProvider";
 
 export default function PostAdPage() {
   const router = useRouter();
+  const { supabase } = useSupabase(); // ✅ Correct client
 
-  // User state
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Photo state
   const [photos, setPhotos] = useState<File[]>([]);
   const [preview, setPreview] = useState<string[]>([]);
 
-  // Check login
+  // Check login using correct client
   useEffect(() => {
     async function checkUser() {
       const { data } = await supabase.auth.getUser();
@@ -23,46 +22,43 @@ export default function PostAdPage() {
         router.push("/login");
         return;
       }
-      setUserId(data.user.id); // store user id
+      setUserId(data.user.id);
     }
     checkUser();
-  }, [router]);
+  }, [router, supabase]);
 
-  // Handle photo upload selection
+  // Upload file previews
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    const fileArray = Array.from(files) as File[];
+    const fileArray = Array.from(files);
 
     if (photos.length + fileArray.length > 10) {
-      alert("You can upload maximum 10 photos");
+      alert("Maximum 10 photos allowed!");
       return;
     }
 
     setPhotos((prev) => [...prev, ...fileArray]);
-
-    const newPreviews = fileArray.map((file) => URL.createObjectURL(file));
-    setPreview((prev) => [...prev, ...newPreviews]);
+    setPreview((prev) => [...prev, ...fileArray.map((f) => URL.createObjectURL(f))]);
   };
 
-  // Remove photo
   const removePhoto = (index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
     setPreview((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Submit Listing
+  // Submit form
   const handleSubmit = async (e: any) => {
     e.preventDefault();
 
     if (!userId) {
-      alert("You must be logged in to post an ad.");
+      alert("Please login to continue.");
       return;
     }
 
-    // 1️⃣ Upload photos to Supabase Storage → listing-images bucket
-    const photoUrls: string[] = [];
+    // 1️⃣ Upload images → /api/upload
+    let photoUrls: string[] = [];
 
     if (photos.length > 0) {
       const formData = new FormData();
@@ -74,15 +70,16 @@ export default function PostAdPage() {
       });
 
       const uploadData = await uploadRes.json();
+
       if (uploadData.error) {
         alert("Image upload failed!");
         return;
       }
 
-      photoUrls.push(...uploadData.urls);
+      photoUrls = uploadData.urls;
     }
 
-    // 2️⃣ Prepare listing object
+    // 2️⃣ Create listing
     const body = {
       title: e.target.title.value,
       description: e.target.description.value,
@@ -90,10 +87,9 @@ export default function PostAdPage() {
       sqft: e.target.sqft.value,
       city: e.target.city.value,
       category: e.target.category.value,
-      photoUrls, // ← correct key
+      photoUrls,
     };
 
-    // 3️⃣ Create listing via API
     const res = await fetch("/api/listings/create", {
       method: "POST",
       body: JSON.stringify(body),
@@ -106,7 +102,7 @@ export default function PostAdPage() {
       return;
     }
 
-    alert("Your listing has been posted!");
+    alert("Ad posted successfully!");
     router.push("/");
   };
 
@@ -116,17 +112,14 @@ export default function PostAdPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
 
-        {/* Photos Upload */}
+        {/* IMAGES */}
         <div className="bg-white p-4 rounded-xl shadow-sm">
           <label className="font-semibold block mb-2">Upload Photos (Max 10)</label>
 
           <div className="grid grid-cols-3 gap-3">
             {preview.map((src, i) => (
               <div key={i} className="relative group">
-                <img
-                  src={src}
-                  className="h-28 w-full object-cover rounded-lg border"
-                />
+                <img src={src} className="h-28 w-full object-cover rounded-lg border" />
                 <button
                   type="button"
                   onClick={() => removePhoto(i)}
@@ -141,19 +134,13 @@ export default function PostAdPage() {
               <label className="flex flex-col items-center justify-center border border-dashed border-slate-400 rounded-lg h-28 cursor-pointer hover:bg-slate-50">
                 <Upload className="w-6 h-6 mb-1" />
                 <span className="text-xs">Add Photos</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handlePhotoUpload}
-                />
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
               </label>
             )}
           </div>
         </div>
 
-        {/* Basic Fields */}
+        {/* FORM FIELDS */}
         <div className="bg-white p-4 rounded-xl shadow-sm space-y-4">
 
           <div>
@@ -161,9 +148,8 @@ export default function PostAdPage() {
             <input
               type="text"
               name="title"
-              required
               className="w-full border p-2 rounded-lg"
-              placeholder="3BHK House for Sale in Anna Nagar"
+              required
             />
           </div>
 
@@ -172,53 +158,31 @@ export default function PostAdPage() {
             <textarea
               name="description"
               rows={4}
-              required
               className="w-full border p-2 rounded-lg"
-              placeholder="Describe your property..."
+              required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="font-semibold block mb-1">Price</label>
-              <input
-                type="number"
-                name="price"
-                required
-                className="w-full border p-2 rounded-lg"
-                placeholder="4500000"
-              />
+              <input type="number" name="price" className="w-full border p-2 rounded-lg" required />
             </div>
 
             <div>
               <label className="font-semibold block mb-1">Built-up Area (sqft)</label>
-              <input
-                type="number"
-                name="sqft"
-                required
-                className="w-full border p-2 rounded-lg"
-                placeholder="1200"
-              />
+              <input type="number" name="sqft" className="w-full border p-2 rounded-lg" required />
             </div>
           </div>
 
           <div>
             <label className="font-semibold block mb-1">City</label>
-            <input
-              type="text"
-              name="city"
-              required
-              className="w-full border p-2 rounded-lg"
-              placeholder="Chennai, Coimbatore..."
-            />
+            <input type="text" name="city" className="w-full border p-2 rounded-lg" required />
           </div>
 
           <div>
             <label className="font-semibold block mb-1">Category</label>
-            <select
-              name="category"
-              className="w-full border p-2 rounded-lg"
-            >
+            <select name="category" className="w-full border p-2 rounded-lg">
               <option value="sale">For Sale</option>
               <option value="rent">For Rent</option>
             </select>
