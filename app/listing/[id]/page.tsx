@@ -10,9 +10,8 @@ import {
   MessageCircle,
   Pencil,
   Trash2,
-  Upload
 } from "lucide-react";
-import { supabase } from "@/utils/supabaseClient";
+import { useSupabase } from "@/components/SupabaseProvider";
 
 // ---------------- Time Ago Helper ----------------
 function timeAgo(dateString?: string) {
@@ -38,6 +37,7 @@ function resolveImageUrl(path: string) {
 }
 
 export default function ListingPage() {
+  const { supabase } = useSupabase();   // ✅ CORRECT CLIENT
   const { id: listingId } = useParams();
   const router = useRouter();
 
@@ -49,14 +49,11 @@ export default function ListingPage() {
   const [images, setImages] = useState<string[]>([]);
   const [idx, setIdx] = useState(0);
 
-  // zoom + gestures
   const [zoom, setZoom] = useState(1);
   const [startDist, setStartDist] = useState<number | null>(null);
   const [swipeStartX, setSwipeStartX] = useState<number | null>(null);
 
-  // favourites
   const [isFav, setIsFav] = useState(false);
-
   const [loading, setLoading] = useState(true);
 
   // --------------------- LOAD LISTING ---------------------
@@ -66,6 +63,7 @@ export default function ListingPage() {
     async function load() {
       setLoading(true);
 
+      // Get logged-in user
       const { data: userData } = await supabase.auth.getUser();
       setUser(userData.user);
 
@@ -84,10 +82,11 @@ export default function ListingPage() {
 
       setListing(listingData);
 
-      // Set images
+      // Prepare images
       const dbImgs = Array.isArray(listingData.images)
         ? listingData.images.map(resolveImageUrl)
         : [];
+
       setImages(dbImgs.length ? dbImgs : ["/placeholder.jpg"]);
 
       // Owner
@@ -109,7 +108,7 @@ export default function ListingPage() {
 
       setSimilar(simData || []);
 
-      // Favourite check
+      // Favorites
       if (userData.user) {
         const { data: fav } = await supabase
           .from("favorites")
@@ -125,7 +124,7 @@ export default function ListingPage() {
     }
 
     load();
-  }, [listingId]);
+  }, [listingId, supabase]);
 
   // --------------------- FAVOURITES ---------------------
   async function toggleFavorite() {
@@ -155,7 +154,7 @@ export default function ListingPage() {
     setIsFav(true);
   }
 
-  // --------------------- IMAGE NAVIGATION ---------------------
+  // --------------------- NAVIGATION ---------------------
   const next = () => {
     setZoom(1);
     setIdx((i) => (i + 1) % images.length);
@@ -189,6 +188,7 @@ export default function ListingPage() {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
+
       const newZoom = Math.min(Math.max((dist / startDist) * zoom, 1), 3);
       setZoom(newZoom);
       return;
@@ -203,13 +203,12 @@ export default function ListingPage() {
     }
   }
 
-  // --------------------- ADVANCED EDITOR ---------------------
+  // --------------------- OWNER EDIT TOOLS ---------------------
+  const isOwner = user && user.id === listing?.user_id;
 
-  /** Delete listing */
   async function deleteListing() {
     if (!confirm("Delete this listing?")) return;
 
-    // delete all images first
     if (Array.isArray(listing.images)) {
       await supabase.storage.from("listing-images").remove(listing.images);
     }
@@ -220,19 +219,18 @@ export default function ListingPage() {
     router.push("/my-ads");
   }
 
-  /** Replace a single image */
   async function replaceImage(index: number, file: File | null) {
     if (!file) return;
 
     const filename = `${listingId}/${Date.now()}-${file.name}`;
 
-    // Upload new file
     const { error: upErr } = await supabase.storage
       .from("listing-images")
       .upload(filename, file);
+
     if (upErr) return alert("Upload failed");
 
-    // Delete old file
+    // Delete old
     const old = listing.images[index];
     await supabase.storage.from("listing-images").remove([old]);
 
@@ -240,20 +238,16 @@ export default function ListingPage() {
     const updated = [...listing.images];
     updated[index] = filename;
 
-    await supabase.from("listings").update({
-      images: updated,
-    }).eq("id", listingId);
+    await supabase.from("listings").update({ images: updated }).eq("id", listingId);
 
-    // update UI
     listing.images = updated;
     setImages(updated.map(resolveImageUrl));
   }
 
-  /** Add new photos */
   async function addPhotos(files: FileList | null) {
     if (!files) return;
-    const arr = Array.from(files);
 
+    const arr = Array.from(files);
     if (listing.images.length + arr.length > 10) {
       return alert("Max 10 photos allowed");
     }
@@ -268,15 +262,12 @@ export default function ListingPage() {
 
     const final = [...listing.images, ...newPaths];
 
-    await supabase.from("listings").update({
-      images: final,
-    }).eq("id", listingId);
+    await supabase.from("listings").update({ images: final }).eq("id", listingId);
 
     listing.images = final;
     setImages(final.map(resolveImageUrl));
   }
 
-  /** Remove a photo */
   async function removePhoto(index: number) {
     if (!confirm("Remove this photo?")) return;
 
@@ -284,9 +275,7 @@ export default function ListingPage() {
 
     const updated = listing.images.filter((_: any, i: number) => i !== index);
 
-    await supabase.from("listings").update({
-      images: updated
-    }).eq("id", listingId);
+    await supabase.from("listings").update({ images: updated }).eq("id", listingId);
 
     listing.images = updated;
     setImages(updated.map(resolveImageUrl));
@@ -295,8 +284,6 @@ export default function ListingPage() {
   // --------------------- RENDER ---------------------
   if (loading) return <p className="text-center mt-20">Loading...</p>;
   if (!listing) return <p className="text-center mt-20">Listing not found</p>;
-
-  const isOwner = user && user.id === listing.user_id;
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -314,7 +301,7 @@ export default function ListingPage() {
           style={{ transform: `scale(${zoom})` }}
         />
 
-        {/* Nav */}
+        {/* NAV */}
         {images.length > 1 && (
           <>
             <button
@@ -337,7 +324,7 @@ export default function ListingPage() {
           </>
         )}
 
-        {/* Favourite */}
+        {/* FAV */}
         <button
           onClick={toggleFavorite}
           className="absolute top-3 right-3 bg-white/90 p-2 rounded-full shadow"
@@ -349,14 +336,11 @@ export default function ListingPage() {
         </button>
       </div>
 
-
-      {/* ---------------- OWNER TOOLS (ADVANCED EDITOR) ---------------- */}
+      {/* OWNER TOOLS */}
       {isOwner && (
         <div className="bg-white p-4 rounded-xl shadow space-y-4">
-
           <h2 className="text-lg font-semibold">Manage Photos</h2>
 
-          {/* Existing photos */}
           <div className="grid grid-cols-3 gap-3">
             {listing.images.map((img: string, index: number) => (
               <div key={index} className="relative">
@@ -366,7 +350,6 @@ export default function ListingPage() {
                 />
 
                 <div className="mt-1 flex gap-1">
-                  {/* Replace button */}
                   <label className="flex-1 bg-slate-100 p-1 text-xs text-center rounded cursor-pointer">
                     Replace
                     <input
@@ -379,7 +362,6 @@ export default function ListingPage() {
                     />
                   </label>
 
-                  {/* Delete button */}
                   <button
                     onClick={() => removePhoto(index)}
                     className="flex-1 bg-red-600 text-white text-xs p-1 rounded"
@@ -391,7 +373,6 @@ export default function ListingPage() {
             ))}
           </div>
 
-          {/* Add new photos */}
           <div>
             <label className="font-semibold block mb-1">Add More Photos</label>
             <input
@@ -403,28 +384,21 @@ export default function ListingPage() {
             />
           </div>
 
-          {/* Full Edit Page */}
           <button
             onClick={() => router.push(`/listing/edit/${listingId}`)}
             className="w-full bg-black text-white py-3 rounded-xl flex items-center justify-center gap-2 mt-3"
           >
-            <Pencil className="w-5 h-5" />
-            Full Edit Page
+            <Pencil className="w-5 h-5" /> Full Edit Page
           </button>
 
-          {/* Delete Listing */}
           <button
             onClick={deleteListing}
             className="w-full bg-red-600 text-white py-3 rounded-xl flex items-center justify-center gap-2"
           >
-            <Trash2 className="w-5 h-5" />
-            Delete Listing
+            <Trash2 className="w-5 h-5" /> Delete Listing
           </button>
         </div>
       )}
-
-      {/* TITLE, PRICE, OWNER INFO, SIMILAR LISTINGS (UNCHANGED) */}
-      {/* ---------- Your existing content continues below ---------- */}
 
       {/* TITLE + PRICE */}
       <div className="flex justify-between items-start">
@@ -432,6 +406,7 @@ export default function ListingPage() {
           <h1 className="text-2xl font-bold">{listing.title}</h1>
           <p className="text-sm text-slate-500">{listing.city}</p>
         </div>
+
         <div className="text-right">
           <p className="text-2xl font-bold text-green-600">₹ {listing.price}</p>
           <p className="text-xs text-slate-500">{timeAgo(listing.created_at)}</p>
