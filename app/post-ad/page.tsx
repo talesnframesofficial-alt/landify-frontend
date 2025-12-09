@@ -7,14 +7,13 @@ import { useSupabase } from "@/components/SupabaseProvider";
 
 export default function PostAdPage() {
   const router = useRouter();
-  const { supabase } = useSupabase(); // ✅ Correct client
+  const { supabase } = useSupabase(); // Correct client
 
   const [userId, setUserId] = useState<string | null>(null);
-
   const [photos, setPhotos] = useState<File[]>([]);
   const [preview, setPreview] = useState<string[]>([]);
 
-  // Check login using correct client
+  // Check login
   useEffect(() => {
     async function checkUser() {
       const { data } = await supabase.auth.getUser();
@@ -25,41 +24,36 @@ export default function PostAdPage() {
       setUserId(data.user.id);
     }
     checkUser();
-  }, [router, supabase]);
+  }, [supabase, router]);
 
-  // Upload file previews
+  // Upload previews
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    const fileArray = Array.from(files);
-
-    if (photos.length + fileArray.length > 10) {
-      alert("Maximum 10 photos allowed!");
+    const list = Array.from(files);
+    if (photos.length + list.length > 10) {
+      alert("Max 10 photos allowed!");
       return;
     }
 
-    setPhotos((prev) => [...prev, ...fileArray]);
-    setPreview((prev) => [...prev, ...fileArray.map((f) => URL.createObjectURL(f))]);
+    setPhotos((prev) => [...prev, ...list]);
+    setPreview((prev) => [...prev, ...list.map((f) => URL.createObjectURL(f))]);
   };
 
-  const removePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
-    setPreview((prev) => prev.filter((_, i) => i !== index));
+  const removePhoto = (i: number) => {
+    setPhotos((prev) => prev.filter((_, idx) => idx !== i));
+    setPreview((prev) => prev.filter((_, idx) => idx !== i));
   };
 
-  // Submit form
+  // Submit Ad
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    if (!userId) return alert("Please login first");
 
-    if (!userId) {
-      alert("Please login to continue.");
-      return;
-    }
-
-    // 1️⃣ Upload images → /api/upload
     let photoUrls: string[] = [];
 
+    // Upload images
     if (photos.length > 0) {
       const formData = new FormData();
       photos.forEach((p) => formData.append("files", p));
@@ -70,7 +64,6 @@ export default function PostAdPage() {
       });
 
       const uploadData = await uploadRes.json();
-
       if (uploadData.error) {
         alert("Image upload failed!");
         return;
@@ -79,14 +72,18 @@ export default function PostAdPage() {
       photoUrls = uploadData.urls;
     }
 
-    // 2️⃣ Create listing
+    // Prepare body
     const body = {
       title: e.target.title.value,
       description: e.target.description.value,
       price: e.target.price.value,
       sqft: e.target.sqft.value,
       city: e.target.city.value,
-      category: e.target.category.value,
+
+      // NEW STRUCTURE:
+      category_main: e.target.category_main.value, // sale/rent
+      category_type: e.target.category_type.value, // residential/commercial/land/industrial
+
       photoUrls,
     };
 
@@ -96,11 +93,7 @@ export default function PostAdPage() {
     });
 
     const result = await res.json();
-
-    if (result.error) {
-      alert("Error: " + result.error);
-      return;
-    }
+    if (result.error) return alert(result.error);
 
     alert("Ad posted successfully!");
     router.push("/");
@@ -145,46 +138,50 @@ export default function PostAdPage() {
 
           <div>
             <label className="font-semibold block mb-1">Ad Title</label>
-            <input
-              type="text"
-              name="title"
-              className="w-full border p-2 rounded-lg"
-              required
-            />
+            <input name="title" type="text" required className="w-full border p-2 rounded-lg" />
           </div>
 
           <div>
             <label className="font-semibold block mb-1">Description</label>
-            <textarea
-              name="description"
-              rows={4}
-              className="w-full border p-2 rounded-lg"
-              required
-            />
+            <textarea name="description" rows={4} required className="w-full border p-2 rounded-lg" />
           </div>
 
+          {/* PRICE + SQFT */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="font-semibold block mb-1">Price</label>
-              <input type="number" name="price" className="w-full border p-2 rounded-lg" required />
+              <input name="price" type="number" required className="w-full border p-2 rounded-lg" />
             </div>
 
             <div>
               <label className="font-semibold block mb-1">Built-up Area (sqft)</label>
-              <input type="number" name="sqft" className="w-full border p-2 rounded-lg" required />
+              <input name="sqft" type="number" required className="w-full border p-2 rounded-lg" />
             </div>
           </div>
 
+          {/* CITY */}
           <div>
             <label className="font-semibold block mb-1">City</label>
-            <input type="text" name="city" className="w-full border p-2 rounded-lg" required />
+            <input name="city" type="text" required className="w-full border p-2 rounded-lg" />
           </div>
 
+          {/* CATEGORY MAIN */}
           <div>
-            <label className="font-semibold block mb-1">Category</label>
-            <select name="category" className="w-full border p-2 rounded-lg">
+            <label className="font-semibold block mb-1">Main Category</label>
+            <select name="category_main" className="w-full border p-2 rounded-lg">
               <option value="sale">For Sale</option>
               <option value="rent">For Rent</option>
+            </select>
+          </div>
+
+          {/* CATEGORY TYPE */}
+          <div>
+            <label className="font-semibold block mb-1">Property Type</label>
+            <select name="category_type" className="w-full border p-2 rounded-lg">
+              <option value="residential">Residential</option>
+              <option value="commercial">Commercial</option>
+              <option value="land">Land / Plots</option>
+              <option value="industrial">Industrial</option>
             </select>
           </div>
         </div>
